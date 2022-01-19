@@ -4,9 +4,24 @@
 
 package frc.robot;
 
+import java.util.List;
+
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.RamseteController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.math.trajectory.TrajectoryConfig;
+import edu.wpi.first.math.trajectory.TrajectoryGenerator;
+import edu.wpi.first.math.trajectory.constraint.DifferentialDriveVoltageConstraint;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.RamseteCommand;
+import edu.wpi.first.wpilibj2.command.Subsystem;
+import frc.robot.Constants.Drive;
 import frc.robot.subsystems.DriveSubsystem;
 
 /**
@@ -54,10 +69,52 @@ public class Robot extends TimedRobot {
   @Override
   public void disabledPeriodic() {}
 
+  public Command getAutonomousCommand() {
+    var autoVoltageConstraint = new DifferentialDriveVoltageConstraint(
+      new SimpleMotorFeedforward(
+        Constants.Drive.ks,
+        Constants.Drive.kv,
+        Constants.Drive.ka), 
+      DriveSubsystem.getInstance().kinematics, 
+      10);
+    
+    TrajectoryConfig config = new TrajectoryConfig(
+      Constants.Drive.kMaxSpeed, 
+      Constants.Drive.kMaxAcceleration).setKinematics(DriveSubsystem.getInstance().kinematics).addConstraint(autoVoltageConstraint);
+    
+    Trajectory testTrajectory = TrajectoryGenerator.generateTrajectory(
+      new Pose2d(0, 0, new Rotation2d(0)), 
+      List.of(
+        new Translation2d(1, 0)
+      ), 
+      new Pose2d(3, 0, new Rotation2d(0)), 
+      config);
+
+    DriveSubsystem.getInstance().resetSensors();
+    DriveSubsystem.getInstance().resetOdometry(testTrajectory.getInitialPose());
+
+    RamseteCommand ramseteCommand = new RamseteCommand(
+      testTrajectory, 
+      DriveSubsystem.getInstance()::getPosition, 
+      new RamseteController(Constants.Drive.kRamseteB, Constants.Drive.kRamseteZeta), 
+      new SimpleMotorFeedforward(
+        Constants.Drive.ks,
+        Constants.Drive.kv,
+        Constants.Drive.ka),
+      DriveSubsystem.getInstance().kinematics, 
+      DriveSubsystem.getInstance()::getWheelSpeeds, 
+      new PIDController(Constants.Drive.kP, Constants.Drive.kI, Constants.Drive.kD), 
+      new PIDController(Constants.Drive.kP, Constants.Drive.kI, Constants.Drive.kD), 
+      DriveSubsystem.getInstance()::tankDriveVolts,
+      DriveSubsystem.getInstance());
+
+    return ramseteCommand.andThen(() -> DriveSubsystem.getInstance().stop());
+  }
+
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+    m_autonomousCommand = getAutonomousCommand();
 
     // schedule the autonomous command (example)
     if (m_autonomousCommand != null) {

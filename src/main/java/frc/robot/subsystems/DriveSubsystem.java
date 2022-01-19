@@ -8,14 +8,18 @@ import com.kauailabs.navx.frc.AHRS;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.RelativeEncoder;
+import com.revrobotics.CANSparkMax.IdleMode;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
+import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.SPI.Port;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive.WheelSpeeds;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.commands.DriveCommand;
@@ -37,6 +41,7 @@ public class DriveSubsystem extends SubsystemBase {
 
   private AHRS navx;
   private DifferentialDriveOdometry odometry;
+  public DifferentialDriveKinematics kinematics;
 
   private double speed = Constants.Drive.normalSpeed;
 
@@ -68,6 +73,11 @@ public class DriveSubsystem extends SubsystemBase {
       motorR.restoreFactoryDefaults();
       motorR2.restoreFactoryDefaults();
 
+      motorL.setIdleMode(IdleMode.kBrake);
+      motorL2.setIdleMode(IdleMode.kBrake);
+      motorR.setIdleMode(IdleMode.kBrake);
+      motorR2.setIdleMode(IdleMode.kBrake);
+
       motorL2.follow(motorL);
       motorR2.follow(motorR);
 
@@ -80,6 +90,7 @@ public class DriveSubsystem extends SubsystemBase {
       navx = new AHRS(Port.kMXP);
 
       odometry = new DifferentialDriveOdometry(new Rotation2d(0), new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
+      kinematics = new DifferentialDriveKinematics(Constants.Drive.trackWidthMeters);
 
       resetSensors();
   }
@@ -110,6 +121,29 @@ public class DriveSubsystem extends SubsystemBase {
     odometry.update(navx.getRotation2d(), getLeftWheelDistance(), getRightWheelDistance());
   }
 
+  public Pose2d getPosition() {
+    return odometry.getPoseMeters();
+  }
+
+  public DifferentialDriveWheelSpeeds getWheelSpeeds() {
+    return new DifferentialDriveWheelSpeeds(encoderL.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion),
+                                            encoderR.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion));
+  }
+
+  public void resetOdometry(Pose2d setPoint) {
+    odometry.resetPosition(setPoint, setPoint.getRotation());
+  }
+
+  public void stop() {
+    tank.tankDrive(0, 0);
+  }
+
+  public void tankDriveVolts(double left, double right) {
+    motorL.setVoltage(-left);
+    motorR.setVoltage(right);
+    tank.feed();
+  }
+
   @Override
   public void periodic() {
     updateOdometry();
@@ -117,9 +151,8 @@ public class DriveSubsystem extends SubsystemBase {
 
   @Override
   public void initSendable(SendableBuilder builder) {
-      builder.addStringProperty("OdometryPoseX", () -> this.odometry.getPoseMeters().toString(), null);
-      builder.addDoubleProperty("LeftDist", () -> getLeftWheelDistance(), null);
-      builder.addDoubleProperty("RightDist", () -> getRightWheelDistance(), null);
+      builder.addStringProperty("OdometryPoseX", () -> getPosition().toString(), null);
+      builder.addStringProperty("LeftDist", () -> getWheelSpeeds().toString(), null);
       builder.addDoubleProperty("Angle", () -> navx.getAngle(), null);
       super.initSendable(builder);
   }

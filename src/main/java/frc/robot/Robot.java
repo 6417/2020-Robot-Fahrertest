@@ -15,13 +15,13 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryGenerator;
+import edu.wpi.first.math.trajectory.constraint.CentripetalAccelerationConstraint;
+import edu.wpi.first.math.trajectory.constraint.DifferentialDriveKinematicsConstraint;
 import edu.wpi.first.math.trajectory.constraint.DifferentialDriveVoltageConstraint;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.RamseteCommand;
-import edu.wpi.first.wpilibj2.command.Subsystem;
-import frc.robot.Constants.Drive;
 import frc.robot.subsystems.DriveSubsystem;
 
 /**
@@ -72,42 +72,59 @@ public class Robot extends TimedRobot {
   public Command getAutonomousCommand() {
     var autoVoltageConstraint = new DifferentialDriveVoltageConstraint(
       new SimpleMotorFeedforward(
-        Constants.Drive.ks,
-        Constants.Drive.kv,
+        Constants.Drive.ksMeters,
+        Constants.Drive.kvMetersPerSecoond,
         Constants.Drive.ka), 
       DriveSubsystem.getInstance().kinematics, 
       10);
-    
+
+    DifferentialDriveKinematicsConstraint kinematicsConstraint = new DifferentialDriveKinematicsConstraint(
+      DriveSubsystem.getInstance().kinematics,
+      Constants.Drive.kMaxSpeed);
+
+    CentripetalAccelerationConstraint centripetalAccelerationConstraint = new CentripetalAccelerationConstraint(
+      Constants.Drive.kMaxCentripetalAcceleration);
+
     TrajectoryConfig config = new TrajectoryConfig(
       Constants.Drive.kMaxSpeed, 
-      Constants.Drive.kMaxAcceleration).setKinematics(DriveSubsystem.getInstance().kinematics).addConstraint(autoVoltageConstraint);
+      Constants.Drive.kMaxAcceleration).setKinematics(DriveSubsystem.getInstance().kinematics).addConstraint(autoVoltageConstraint).addConstraint(kinematicsConstraint).addConstraint(centripetalAccelerationConstraint);
     
     Trajectory testTrajectory = TrajectoryGenerator.generateTrajectory(
       new Pose2d(0, 0, new Rotation2d(0)), 
       List.of(
+        new Translation2d(1, 1),
+        new Translation2d(2, -1),
+        new Translation2d(3, 0),
+        new Translation2d(2, 0),
         new Translation2d(1, 0)
-      ), 
-      new Pose2d(3, 0, new Rotation2d(0)), 
+      ),
+      new Pose2d(0, 0, new Rotation2d(0)), 
       config);
 
     DriveSubsystem.getInstance().resetSensors();
     DriveSubsystem.getInstance().resetOdometry(testTrajectory.getInitialPose());
+
+    PIDController rightController = new PIDController(Constants.Drive.kP, Constants.Drive.kI, Constants.Drive.kD);
+    PIDController leftController = new PIDController(Constants.Drive.kP, Constants.Drive.kI, Constants.Drive.kD);
 
     RamseteCommand ramseteCommand = new RamseteCommand(
       testTrajectory, 
       DriveSubsystem.getInstance()::getPosition, 
       new RamseteController(Constants.Drive.kRamseteB, Constants.Drive.kRamseteZeta), 
       new SimpleMotorFeedforward(
-        Constants.Drive.ks,
-        Constants.Drive.kv,
+        Constants.Drive.ksMeters,
+        Constants.Drive.kvMetersPerSecoond,
         Constants.Drive.ka),
       DriveSubsystem.getInstance().kinematics, 
       DriveSubsystem.getInstance()::getWheelSpeeds, 
-      new PIDController(Constants.Drive.kP, Constants.Drive.kI, Constants.Drive.kD), 
-      new PIDController(Constants.Drive.kP, Constants.Drive.kI, Constants.Drive.kD), 
-      DriveSubsystem.getInstance()::tankDriveVolts,
+      leftController,
+      rightController,
+      (leftSpeed, rightSpeed) -> {
+        DriveSubsystem.getInstance().tankDriveVolts(leftSpeed, rightSpeed);
+        DriveSubsystem.getInstance().rightSetpoint = rightController.getSetpoint();
+        DriveSubsystem.getInstance().leftSetpoint = leftController.getSetpoint();
+      },
       DriveSubsystem.getInstance());
-
     return ramseteCommand.andThen(() -> DriveSubsystem.getInstance().stop());
   }
 

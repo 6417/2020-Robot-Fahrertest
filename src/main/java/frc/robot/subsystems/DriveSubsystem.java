@@ -6,9 +6,10 @@ package frc.robot.subsystems;
 
 import com.kauailabs.navx.frc.AHRS;
 import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.RelativeEncoder;
-import com.revrobotics.CANSparkMax.IdleMode;
+import com.revrobotics.SparkMaxPIDController;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -19,7 +20,6 @@ import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.SPI.Port;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
-import edu.wpi.first.wpilibj.drive.DifferentialDrive.WheelSpeeds;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.commands.DriveCommand;
@@ -35,6 +35,12 @@ public class DriveSubsystem extends SubsystemBase {
   private CANSparkMax motorL2;
   private CANSparkMax motorR;
   private CANSparkMax motorR2;
+
+  private SparkMaxPIDController leftController;
+  private SparkMaxPIDController rightController;
+
+  public double rightSetpoint;
+  public double leftSetpoint;
 
   private RelativeEncoder encoderL;
   private RelativeEncoder encoderR;
@@ -87,6 +93,16 @@ public class DriveSubsystem extends SubsystemBase {
       encoderL = motorL.getEncoder();
       encoderR = motorR.getEncoder();
 
+      rightController = motorR.getPIDController();
+      rightController.setP(Constants.Drive.kP);
+      rightController.setI(Constants.Drive.kI);
+      rightController.setD(Constants.Drive.kD);
+
+      leftController = motorL.getPIDController();
+      leftController.setP(Constants.Drive.kP);
+      leftController.setI(Constants.Drive.kI);
+      leftController.setD(Constants.Drive.kD);
+
       navx = new AHRS(Port.kMXP);
 
       odometry = new DifferentialDriveOdometry(new Rotation2d(0), new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
@@ -97,6 +113,7 @@ public class DriveSubsystem extends SubsystemBase {
 
   public void resetSensors() {
     navx.reset();
+    odometry.resetPosition(new Pose2d(0, 0, new Rotation2d(0)), new Rotation2d(0));
     encoderL.setPosition(0);
     encoderR.setPosition(0);
   }
@@ -117,8 +134,16 @@ public class DriveSubsystem extends SubsystemBase {
     return encoderR.getPosition() / -Constants.Drive.encoderToMetersConversion;
   }
 
+  public SparkMaxPIDController getRightPIDController(){
+    return rightController;
+  }
+
+  public SparkMaxPIDController getLeftPIDController(){
+    return leftController;
+  }
+
   private void updateOdometry() {
-    odometry.update(navx.getRotation2d(), getLeftWheelDistance(), getRightWheelDistance());
+    odometry.update(Rotation2d.fromDegrees(navx.getAngle()), getLeftWheelDistance(), getRightWheelDistance());
   }
 
   public Pose2d getPosition() {
@@ -127,7 +152,7 @@ public class DriveSubsystem extends SubsystemBase {
 
   public DifferentialDriveWheelSpeeds getWheelSpeeds() {
     return new DifferentialDriveWheelSpeeds(encoderL.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion),
-                                            encoderR.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion));
+                                            -encoderR.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion));
   }
 
   public void resetOdometry(Pose2d setPoint) {
@@ -135,7 +160,7 @@ public class DriveSubsystem extends SubsystemBase {
   }
 
   public void stop() {
-    tank.tankDrive(0, 0);
+    tank.stopMotor();
   }
 
   public void tankDriveVolts(double left, double right) {
@@ -153,7 +178,12 @@ public class DriveSubsystem extends SubsystemBase {
   public void initSendable(SendableBuilder builder) {
       builder.addStringProperty("OdometryPoseX", () -> getPosition().toString(), null);
       builder.addStringProperty("LeftDist", () -> getWheelSpeeds().toString(), null);
-      builder.addDoubleProperty("Angle", () -> navx.getAngle(), null);
+      builder.addDoubleProperty("Angle", () -> navx.getRotation2d().getDegrees(), null);
+      builder.addDoubleProperty("ANGLE_ODOMETRY", () -> getPosition().getRotation().getDegrees(),null);
+      builder.addDoubleProperty("rightSpeed", () -> getWheelSpeeds().rightMetersPerSecond, null);
+      builder.addDoubleProperty("leftSpeed", () -> getWheelSpeeds().leftMetersPerSecond, null);
+      builder.addDoubleProperty("leftSetpoint", () -> leftSetpoint, null);
+      builder.addDoubleProperty("rightSetpoint", () -> rightSetpoint, null);
       super.initSendable(builder);
   }
 }

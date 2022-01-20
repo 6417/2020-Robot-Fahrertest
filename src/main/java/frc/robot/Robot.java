@@ -76,7 +76,7 @@ public class Robot extends TimedRobot {
         Constants.Drive.kvMetersPerSecoond,
         Constants.Drive.ka), 
       DriveSubsystem.getInstance().kinematics, 
-      10);
+      8);
 
     DifferentialDriveKinematicsConstraint kinematicsConstraint = new DifferentialDriveKinematicsConstraint(
       DriveSubsystem.getInstance().kinematics,
@@ -90,15 +90,13 @@ public class Robot extends TimedRobot {
       Constants.Drive.kMaxAcceleration).setKinematics(DriveSubsystem.getInstance().kinematics).addConstraint(autoVoltageConstraint).addConstraint(kinematicsConstraint).addConstraint(centripetalAccelerationConstraint);
     
     Trajectory testTrajectory = TrajectoryGenerator.generateTrajectory(
-      new Pose2d(0, 0, new Rotation2d(0)), 
+      new Pose2d(0, 0, Rotation2d.fromDegrees(0)), 
       List.of(
-        new Translation2d(1, 1),
-        new Translation2d(2, -1),
-        new Translation2d(3, 0),
-        new Translation2d(2, 0),
-        new Translation2d(1, 0)
+        new Translation2d(4, 0),
+        new Translation2d(2, -2),
+        new Translation2d(2, 2)
       ),
-      new Pose2d(0, 0, new Rotation2d(0)), 
+      new Pose2d(0, 0, Rotation2d.fromDegrees(180)),
       config);
 
     DriveSubsystem.getInstance().resetSensors();

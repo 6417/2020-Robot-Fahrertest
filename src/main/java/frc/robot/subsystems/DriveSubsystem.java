@@ -9,14 +9,19 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.RelativeEncoder;
-import com.revrobotics.SparkMaxPIDController;
 
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
+import edu.wpi.first.math.trajectory.TrajectoryConfig;
+import edu.wpi.first.math.trajectory.constraint.CentripetalAccelerationConstraint;
+import edu.wpi.first.math.trajectory.constraint.DifferentialDriveKinematicsConstraint;
+import edu.wpi.first.math.trajectory.constraint.DifferentialDriveVoltageConstraint;
 import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.SPI.Port;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
@@ -36,20 +41,26 @@ public class DriveSubsystem extends SubsystemBase {
   private CANSparkMax motorR;
   private CANSparkMax motorR2;
 
-  private SparkMaxPIDController leftController;
-  private SparkMaxPIDController rightController;
-
-  public double rightSetpoint;
-  public double leftSetpoint;
-
   private RelativeEncoder encoderL;
   private RelativeEncoder encoderR;
 
   private AHRS navx;
   private DifferentialDriveOdometry odometry;
-  public DifferentialDriveKinematics kinematics;
+  private DifferentialDriveKinematics kinematics;
 
   private double speed = Constants.Drive.normalSpeed;
+
+  private PIDController rightVelocityController;
+  private PIDController leftVelocityController;
+
+  //Constrains
+  private SimpleMotorFeedforward motorFeedforward;
+  private DifferentialDriveVoltageConstraint voltageConstraint;
+  private DifferentialDriveKinematicsConstraint kinematicsConstraint;
+  private CentripetalAccelerationConstraint centripetalAccelerationConstraint;
+
+  //config
+  private TrajectoryConfig trajectoryConfig;
 
   public static DriveSubsystem getInstance() {
     if (instance == null) {
@@ -57,15 +68,77 @@ public class DriveSubsystem extends SubsystemBase {
     }
     return instance;
   }
-
+  
   /** Creates a new ExampleSubsystem. */
   private DriveSubsystem() {
     configMotors();
     tank = new DifferentialDrive(motorL, motorR);
-
+    
+    navx = new AHRS(Port.kMXP);
+    
+    odometry = new DifferentialDriveOdometry(new Rotation2d(0), new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
+    kinematics = new DifferentialDriveKinematics(Constants.Drive.trackWidthMeters);
+    
+    resetSensors();
+    
     DriveSubsystem.instance = this;
-
+    
     setDefaultCommand(new DriveCommand());
+    
+    configSimpleMotorFeedforward();
+
+    configConstrains();
+    
+    configTrajectoryConfig();
+  }
+  
+  public DifferentialDriveKinematics getDriveKinematics() {
+    return kinematics;
+  }
+
+  public DifferentialDriveVoltageConstraint getVoltageConstrain() {
+    return voltageConstraint;
+  }
+
+  public DifferentialDriveKinematicsConstraint getKinematicsConstrain() {
+    return kinematicsConstraint;
+  }
+
+  public CentripetalAccelerationConstraint getCentripetConstraint() {
+    return centripetalAccelerationConstraint;
+  }
+
+  public TrajectoryConfig getTrajectoryConfig() {
+    return trajectoryConfig;
+  }
+
+  public PIDController getLeftVelocityController() {
+    return leftVelocityController;
+  }
+  
+  public PIDController getRightVelocityController() {
+    return rightVelocityController;
+  }
+
+  private double getLeftWheelDistance() {
+    return encoderL.getPosition() / Constants.Drive.encoderToMetersConversion;
+  }
+  
+  private double getRightWheelDistance() {
+    return encoderR.getPosition() / -Constants.Drive.encoderToMetersConversion;
+  }
+
+  public DifferentialDriveWheelSpeeds getWheelSpeeds() {
+    return new DifferentialDriveWheelSpeeds(encoderL.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion),
+                                           -encoderR.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion));
+  }
+  
+  public Pose2d getPosition() {
+    return odometry.getPoseMeters();
+  }
+
+  public SimpleMotorFeedforward getMotorFeedforward() {
+    return motorFeedforward;
   }
 
   private void configMotors() {
@@ -93,22 +166,45 @@ public class DriveSubsystem extends SubsystemBase {
       encoderL = motorL.getEncoder();
       encoderR = motorR.getEncoder();
 
-      rightController = motorR.getPIDController();
-      rightController.setP(Constants.Drive.kP);
-      rightController.setI(Constants.Drive.kI);
-      rightController.setD(Constants.Drive.kD);
+      rightVelocityController = new PIDController(Constants.Drive.kP, Constants.Drive.kI, Constants.Drive.kD);
+      leftVelocityController = new PIDController(Constants.Drive.kP, Constants.Drive.kI, Constants.Drive.kD);
+  }
 
-      leftController = motorL.getPIDController();
-      leftController.setP(Constants.Drive.kP);
-      leftController.setI(Constants.Drive.kI);
-      leftController.setD(Constants.Drive.kD);
+  private void configSimpleMotorFeedforward() {
+      motorFeedforward = new SimpleMotorFeedforward(
+        Constants.Drive.ksMeters,
+        Constants.Drive.kvMetersPerSecoond,
+        Constants.Drive.ka);
+  }
 
-      navx = new AHRS(Port.kMXP);
+  private void configConstrains() {
+    configVoltageConstrain();
+    configKinematicsConstrain();
+    configCetripedalAccelerationConstrain();
+  }
 
-      odometry = new DifferentialDriveOdometry(new Rotation2d(0), new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
-      kinematics = new DifferentialDriveKinematics(Constants.Drive.trackWidthMeters);
+  private void configVoltageConstrain() {
+    voltageConstraint = new DifferentialDriveVoltageConstraint(
+        motorFeedforward,
+        kinematics,
+      10);
+  }
 
-      resetSensors();
+  private void configKinematicsConstrain() {
+    kinematicsConstraint = new DifferentialDriveKinematicsConstraint(
+      kinematics,
+      Constants.Drive.kMaxSpeed);
+  }
+
+  private void configCetripedalAccelerationConstrain() {
+    centripetalAccelerationConstraint = new CentripetalAccelerationConstraint(
+      Constants.Drive.kMaxCentripetalAcceleration);
+  }
+
+  private void configTrajectoryConfig() {
+    trajectoryConfig = new TrajectoryConfig(
+      Constants.Drive.kMaxSpeed, 
+      Constants.Drive.kMaxAcceleration).setKinematics(kinematics).addConstraint(voltageConstraint).addConstraint(kinematicsConstraint).addConstraint(centripetalAccelerationConstraint);
   }
 
   public void resetSensors() {
@@ -118,45 +214,20 @@ public class DriveSubsystem extends SubsystemBase {
     encoderR.setPosition(0);
   }
 
-  public void drive() {
-    tank.arcadeDrive(-Controller.getJoystick().getX()*this.speed, Controller.getJoystick().getY()*this.speed);
-  }
-
-  public void setSpeed(double maxSpeed) {
-    this.speed = maxSpeed;
-  }
-
-  private double getLeftWheelDistance() {
-    return encoderL.getPosition() / Constants.Drive.encoderToMetersConversion;
-  }
-
-  private double getRightWheelDistance() {
-    return encoderR.getPosition() / -Constants.Drive.encoderToMetersConversion;
-  }
-
-  public SparkMaxPIDController getRightPIDController(){
-    return rightController;
-  }
-
-  public SparkMaxPIDController getLeftPIDController(){
-    return leftController;
+  public void resetOdometry(Pose2d setPoint) {
+    odometry.resetPosition(setPoint, setPoint.getRotation());
   }
 
   private void updateOdometry() {
     odometry.update(Rotation2d.fromDegrees(navx.getAngle()), getLeftWheelDistance(), getRightWheelDistance());
   }
 
-  public Pose2d getPosition() {
-    return odometry.getPoseMeters();
+  public void drive() {
+    tank.arcadeDrive(-Controller.getJoystick().getX()*this.speed, Controller.getJoystick().getY()*this.speed);
   }
 
-  public DifferentialDriveWheelSpeeds getWheelSpeeds() {
-    return new DifferentialDriveWheelSpeeds(encoderL.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion),
-                                            -encoderR.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion));
-  }
-
-  public void resetOdometry(Pose2d setPoint) {
-    odometry.resetPosition(setPoint, setPoint.getRotation());
+  public void setSpeed(double maxSpeed) {
+    this.speed = maxSpeed;
   }
 
   public void stop() {
@@ -182,8 +253,6 @@ public class DriveSubsystem extends SubsystemBase {
       builder.addDoubleProperty("ANGLE_ODOMETRY", () -> getPosition().getRotation().getDegrees(),null);
       builder.addDoubleProperty("rightSpeed", () -> getWheelSpeeds().rightMetersPerSecond, null);
       builder.addDoubleProperty("leftSpeed", () -> getWheelSpeeds().leftMetersPerSecond, null);
-      builder.addDoubleProperty("leftSetpoint", () -> leftSetpoint, null);
-      builder.addDoubleProperty("rightSetpoint", () -> rightSetpoint, null);
       super.initSendable(builder);
   }
 }

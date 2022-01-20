@@ -13,16 +13,13 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryGenerator;
-import edu.wpi.first.math.trajectory.constraint.CentripetalAccelerationConstraint;
-import edu.wpi.first.math.trajectory.constraint.DifferentialDriveKinematicsConstraint;
-import edu.wpi.first.math.trajectory.constraint.DifferentialDriveVoltageConstraint;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.RamseteCommand;
 import frc.robot.subsystems.DriveSubsystem;
+import frc.robot.utilities.RamseteCommandGenerator;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -69,67 +66,64 @@ public class Robot extends TimedRobot {
   @Override
   public void disabledPeriodic() {}
 
-  public Command getAutonomousCommand() {
-    var autoVoltageConstraint = new DifferentialDriveVoltageConstraint(
-      new SimpleMotorFeedforward(
-        Constants.Drive.ksMeters,
-        Constants.Drive.kvMetersPerSecoond,
-        Constants.Drive.ka), 
-      DriveSubsystem.getInstance().kinematics, 
-      8);
-
-    DifferentialDriveKinematicsConstraint kinematicsConstraint = new DifferentialDriveKinematicsConstraint(
-      DriveSubsystem.getInstance().kinematics,
-      Constants.Drive.kMaxSpeed);
-
-    CentripetalAccelerationConstraint centripetalAccelerationConstraint = new CentripetalAccelerationConstraint(
-      Constants.Drive.kMaxCentripetalAcceleration);
-
-    TrajectoryConfig config = new TrajectoryConfig(
-      Constants.Drive.kMaxSpeed, 
-      Constants.Drive.kMaxAcceleration).setKinematics(DriveSubsystem.getInstance().kinematics).addConstraint(autoVoltageConstraint).addConstraint(kinematicsConstraint).addConstraint(centripetalAccelerationConstraint);
+  // public Command getAutonomousCommand() {
+  //   Trajectory testTrajectory = TrajectoryGenerator.generateTrajectory(
+  //     new Pose2d(0, 0, Rotation2d.fromDegrees(0)), 
+  //     List.of(
+  //       new Translation2d(4, 0),
+  //       new Translation2d(2, -2),
+  //       new Translation2d(2, 2)
+  //     ),
+  //     new Pose2d(0, 0, Rotation2d.fromDegrees(180)),
+  //     DriveSubsystem.getInstance().getTrajectoryConfig());
     
-    Trajectory testTrajectory = TrajectoryGenerator.generateTrajectory(
-      new Pose2d(0, 0, Rotation2d.fromDegrees(0)), 
-      List.of(
-        new Translation2d(4, 0),
-        new Translation2d(2, -2),
-        new Translation2d(2, 2)
-      ),
-      new Pose2d(0, 0, Rotation2d.fromDegrees(180)),
-      config);
+  //   //Autonous
+  //   DriveSubsystem.getInstance().resetSensors();
+  //   DriveSubsystem.getInstance().resetOdometry(testTrajectory.getInitialPose());
 
-    DriveSubsystem.getInstance().resetSensors();
-    DriveSubsystem.getInstance().resetOdometry(testTrajectory.getInitialPose());
+  //   RamseteCommand ramseteCommand = new RamseteCommand(
+  //     testTrajectory, 
+  //     DriveSubsystem.getInstance()::getPosition, 
+  //     new RamseteController(Constants.Drive.kRamseteB, Constants.Drive.kRamseteZeta), 
+  //     new SimpleMotorFeedforward(
+  //       Constants.Drive.ksMeters,
+  //       Constants.Drive.kvMetersPerSecoond,
+  //       Constants.Drive.ka),
+  //     DriveSubsystem.getInstance().getDriveKinematics(), 
+  //     DriveSubsystem.getInstance()::getWheelSpeeds, 
+  //     DriveSubsystem.getInstance().getLeftVelocityController(),
+  //     DriveSubsystem.getInstance().getRightVelocityController(),
+  //     (leftSpeed, rightSpeed) -> {
+  //       DriveSubsystem.getInstance().tankDriveVolts(leftSpeed, rightSpeed);
+  //     },
+  //     DriveSubsystem.getInstance());
+  //   return ramseteCommand.andThen(() -> DriveSubsystem.getInstance().stop());
+  // }
 
-    PIDController rightController = new PIDController(Constants.Drive.kP, Constants.Drive.kI, Constants.Drive.kD);
-    PIDController leftController = new PIDController(Constants.Drive.kP, Constants.Drive.kI, Constants.Drive.kD);
+  Trajectory testTrajectory = TrajectoryGenerator.generateTrajectory(
+    new Pose2d(0, 0, Rotation2d.fromDegrees(0)), 
+    List.of(
+      new Translation2d(4, 0),
+      new Translation2d(2, -2),
+      new Translation2d(2, 2)
+    ),
+    new Pose2d(0, 0, Rotation2d.fromDegrees(180)),
+    DriveSubsystem.getInstance().getTrajectoryConfig());
 
-    RamseteCommand ramseteCommand = new RamseteCommand(
-      testTrajectory, 
-      DriveSubsystem.getInstance()::getPosition, 
-      new RamseteController(Constants.Drive.kRamseteB, Constants.Drive.kRamseteZeta), 
-      new SimpleMotorFeedforward(
-        Constants.Drive.ksMeters,
-        Constants.Drive.kvMetersPerSecoond,
-        Constants.Drive.ka),
-      DriveSubsystem.getInstance().kinematics, 
-      DriveSubsystem.getInstance()::getWheelSpeeds, 
-      leftController,
-      rightController,
-      (leftSpeed, rightSpeed) -> {
-        DriveSubsystem.getInstance().tankDriveVolts(leftSpeed, rightSpeed);
-        DriveSubsystem.getInstance().rightSetpoint = rightController.getSetpoint();
-        DriveSubsystem.getInstance().leftSetpoint = leftController.getSetpoint();
-      },
-      DriveSubsystem.getInstance());
-    return ramseteCommand.andThen(() -> DriveSubsystem.getInstance().stop());
-  }
+  Trajectory testTrajectory2 = TrajectoryGenerator.generateTrajectory(
+    new Pose2d(0, 0, Rotation2d.fromDegrees(0)), 
+    List.of(
+      new Translation2d(2, 0),
+      new Translation2d(1, -1),
+      new Translation2d(2, 2)
+    ),
+    new Pose2d(1, 0, Rotation2d.fromDegrees(180)),
+    DriveSubsystem.getInstance().getTrajectoryConfig());
 
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    m_autonomousCommand = getAutonomousCommand();
+    m_autonomousCommand = RamseteCommandGenerator.generateRamseteCommand(testTrajectory2);
 
     // schedule the autonomous command (example)
     if (m_autonomousCommand != null) {

@@ -13,24 +13,18 @@ public final class Constants {
 
         public static final double trackWidthMeters = 0.5;
 
-        // public static final double ksMeters = 0.087112;
-        // public static final double kvMetersPerSecoond = 2.986;
-        // public static final double ka = 0.318;
-
         public static final double ksMeters = 0.12;
         public static final double kvMetersPerSecoond = 2.89;
         public static final double ka = 0.45;
 
-        public static final double kMaxSpeed = 2.25;
-        public static final double kMaxAcceleration = 1;
+        public static final double kMaxSpeed = 1.5;
+        public static final double kMaxAcceleration = 0.7;
         public static final double kMaxCentripetalAcceleration = 0.5;
 
         public static final double kRamseteB = 2;
         public static final double kRamseteZeta = 0.7;
 
-        // public static final double kP = 0.015271;
         public static final double kP = 0.035271;
-        // public static final double kP = 0;
         public static final double kI = 0;
         public static final double kD = 0;
     }

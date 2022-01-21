@@ -4,21 +4,12 @@
 
 package frc.robot;
 
-import java.util.List;
-
-import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.RamseteController;
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.RamseteCommand;
 import frc.robot.subsystems.DriveSubsystem;
+import frc.robot.utilities.PathviewerLoader;
 import frc.robot.utilities.RamseteCommandGenerator;
 
 /**
@@ -30,8 +21,6 @@ import frc.robot.utilities.RamseteCommandGenerator;
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
 
-  private RobotContainer m_robotContainer;
-
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
@@ -40,7 +29,6 @@ public class Robot extends TimedRobot {
   public void robotInit() {
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
-    m_robotContainer = new RobotContainer();
   }
 
   /**
@@ -66,64 +54,14 @@ public class Robot extends TimedRobot {
   @Override
   public void disabledPeriodic() {}
 
-  // public Command getAutonomousCommand() {
-  //   Trajectory testTrajectory = TrajectoryGenerator.generateTrajectory(
-  //     new Pose2d(0, 0, Rotation2d.fromDegrees(0)), 
-  //     List.of(
-  //       new Translation2d(4, 0),
-  //       new Translation2d(2, -2),
-  //       new Translation2d(2, 2)
-  //     ),
-  //     new Pose2d(0, 0, Rotation2d.fromDegrees(180)),
-  //     DriveSubsystem.getInstance().getTrajectoryConfig());
-    
-  //   //Autonous
-  //   DriveSubsystem.getInstance().resetSensors();
-  //   DriveSubsystem.getInstance().resetOdometry(testTrajectory.getInitialPose());
-
-  //   RamseteCommand ramseteCommand = new RamseteCommand(
-  //     testTrajectory, 
-  //     DriveSubsystem.getInstance()::getPosition, 
-  //     new RamseteController(Constants.Drive.kRamseteB, Constants.Drive.kRamseteZeta), 
-  //     new SimpleMotorFeedforward(
-  //       Constants.Drive.ksMeters,
-  //       Constants.Drive.kvMetersPerSecoond,
-  //       Constants.Drive.ka),
-  //     DriveSubsystem.getInstance().getDriveKinematics(), 
-  //     DriveSubsystem.getInstance()::getWheelSpeeds, 
-  //     DriveSubsystem.getInstance().getLeftVelocityController(),
-  //     DriveSubsystem.getInstance().getRightVelocityController(),
-  //     (leftSpeed, rightSpeed) -> {
-  //       DriveSubsystem.getInstance().tankDriveVolts(leftSpeed, rightSpeed);
-  //     },
-  //     DriveSubsystem.getInstance());
-  //   return ramseteCommand.andThen(() -> DriveSubsystem.getInstance().stop());
-  // }
-
-  Trajectory testTrajectory = TrajectoryGenerator.generateTrajectory(
-    new Pose2d(0, 0, Rotation2d.fromDegrees(0)), 
-    List.of(
-      new Translation2d(4, 0),
-      new Translation2d(2, -2),
-      new Translation2d(2, 2)
-    ),
-    new Pose2d(0, 0, Rotation2d.fromDegrees(180)),
-    DriveSubsystem.getInstance().getTrajectoryConfig());
-
-  Trajectory testTrajectory2 = TrajectoryGenerator.generateTrajectory(
-    new Pose2d(0, 0, Rotation2d.fromDegrees(0)), 
-    List.of(
-      new Translation2d(2, 0),
-      new Translation2d(1, -1),
-      new Translation2d(2, 2)
-    ),
-    new Pose2d(1, 0, Rotation2d.fromDegrees(180)),
-    DriveSubsystem.getInstance().getTrajectoryConfig());
-
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    m_autonomousCommand = RamseteCommandGenerator.generateRamseteCommand(testTrajectory2);
+    String trajectoryJSON = "paths/output/TestPath.wpilib.json";
+
+    Trajectory pathWeavertest = PathviewerLoader.loadTrajectory(trajectoryJSON);
+
+    m_autonomousCommand = RamseteCommandGenerator.generateRamseteCommand(pathWeavertest);
 
     // schedule the autonomous command (example)
     if (m_autonomousCommand != null) {

@@ -45,6 +45,7 @@ public class DriveSubsystem extends SubsystemBase {
   private RelativeEncoder encoderR;
 
   private AHRS navx;
+  private double navxOffset;
   private DifferentialDriveOdometry odometry;
   private DifferentialDriveKinematics kinematics;
 
@@ -132,6 +133,10 @@ public class DriveSubsystem extends SubsystemBase {
     return new DifferentialDriveWheelSpeeds(encoderL.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion),
                                            -encoderR.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion));
   }
+
+  public double getNavxAngle() {
+    return navx.getAngle() + navxOffset;
+  }
   
   public Pose2d getPosition() {
     return odometry.getPoseMeters();
@@ -208,6 +213,7 @@ public class DriveSubsystem extends SubsystemBase {
   }
 
   public void resetSensors() {
+    navxOffset = 0;
     navx.reset();
     odometry.resetPosition(new Pose2d(0, 0, new Rotation2d(0)), new Rotation2d(0));
     encoderL.setPosition(0);
@@ -216,10 +222,15 @@ public class DriveSubsystem extends SubsystemBase {
 
   public void resetOdometry(Pose2d setPoint) {
     odometry.resetPosition(setPoint, setPoint.getRotation());
+    setNavxOffset(setPoint.getRotation().getDegrees());
+  }
+
+  public void setNavxOffset(double offset) {
+    navxOffset = offset;
   }
 
   private void updateOdometry() {
-    odometry.update(Rotation2d.fromDegrees(navx.getAngle()), getLeftWheelDistance(), getRightWheelDistance());
+    odometry.update(Rotation2d.fromDegrees(getNavxAngle()), getLeftWheelDistance(), getRightWheelDistance());
   }
 
   public void drive() {
@@ -249,7 +260,7 @@ public class DriveSubsystem extends SubsystemBase {
   public void initSendable(SendableBuilder builder) {
       builder.addStringProperty("OdometryPoseX", () -> getPosition().toString(), null);
       builder.addStringProperty("LeftDist", () -> getWheelSpeeds().toString(), null);
-      builder.addDoubleProperty("Angle", () -> navx.getRotation2d().getDegrees(), null);
+      builder.addDoubleProperty("Angle", () -> getNavxAngle(), null);
       builder.addDoubleProperty("ANGLE_ODOMETRY", () -> getPosition().getRotation().getDegrees(),null);
       builder.addDoubleProperty("rightSpeed", () -> getWheelSpeeds().rightMetersPerSecond, null);
       builder.addDoubleProperty("leftSpeed", () -> getWheelSpeeds().leftMetersPerSecond, null);

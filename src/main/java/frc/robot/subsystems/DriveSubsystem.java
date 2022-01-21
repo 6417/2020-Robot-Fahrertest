@@ -4,7 +4,6 @@
 
 package frc.robot.subsystems;
 
-import com.kauailabs.navx.frc.AHRS;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
@@ -29,6 +28,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.commands.DriveCommand;
 import frc.robot.utilities.Controller;
+import frc.robot.utilities.FridoNavx;
 
 public class DriveSubsystem extends SubsystemBase {
   
@@ -44,8 +44,7 @@ public class DriveSubsystem extends SubsystemBase {
   private RelativeEncoder encoderL;
   private RelativeEncoder encoderR;
 
-  private AHRS navx;
-  private double navxOffset;
+  private FridoNavx navx;
   private DifferentialDriveOdometry odometry;
   private DifferentialDriveKinematics kinematics;
 
@@ -75,7 +74,7 @@ public class DriveSubsystem extends SubsystemBase {
     configMotors();
     tank = new DifferentialDrive(motorL, motorR);
     
-    navx = new AHRS(Port.kMXP);
+    navx = new FridoNavx(Port.kMXP);
     
     odometry = new DifferentialDriveOdometry(new Rotation2d(0), new Pose2d(new Translation2d(0, 0), new Rotation2d(0)));
     kinematics = new DifferentialDriveKinematics(Constants.Drive.trackWidthMeters);
@@ -132,10 +131,6 @@ public class DriveSubsystem extends SubsystemBase {
   public DifferentialDriveWheelSpeeds getWheelSpeeds() {
     return new DifferentialDriveWheelSpeeds(encoderL.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion),
                                            -encoderR.getVelocity() / (60 * Constants.Drive.encoderToMetersConversion));
-  }
-
-  public double getNavxAngle() {
-    return navx.getAngle() + navxOffset;
   }
   
   public Pose2d getPosition() {
@@ -213,7 +208,6 @@ public class DriveSubsystem extends SubsystemBase {
   }
 
   public void resetSensors() {
-    navxOffset = 0;
     navx.reset();
     odometry.resetPosition(new Pose2d(0, 0, new Rotation2d(0)), new Rotation2d(0));
     encoderL.setPosition(0);
@@ -222,15 +216,11 @@ public class DriveSubsystem extends SubsystemBase {
 
   public void resetOdometry(Pose2d setPoint) {
     odometry.resetPosition(setPoint, setPoint.getRotation());
-    setNavxOffset(setPoint.getRotation().getDegrees());
-  }
-
-  public void setNavxOffset(double offset) {
-    navxOffset = offset;
+    navx.setAngleOffset(setPoint.getRotation().getDegrees());
   }
 
   private void updateOdometry() {
-    odometry.update(Rotation2d.fromDegrees(getNavxAngle()), getLeftWheelDistance(), getRightWheelDistance());
+    odometry.update(Rotation2d.fromDegrees(navx.getAngle()), getLeftWheelDistance(), getRightWheelDistance());
   }
 
   public void drive() {
@@ -260,7 +250,7 @@ public class DriveSubsystem extends SubsystemBase {
   public void initSendable(SendableBuilder builder) {
       builder.addStringProperty("OdometryPoseX", () -> getPosition().toString(), null);
       builder.addStringProperty("LeftDist", () -> getWheelSpeeds().toString(), null);
-      builder.addDoubleProperty("Angle", () -> getNavxAngle(), null);
+      builder.addDoubleProperty("Angle", () -> navx.getAngle(), null);
       builder.addDoubleProperty("ANGLE_ODOMETRY", () -> getPosition().getRotation().getDegrees(),null);
       builder.addDoubleProperty("rightSpeed", () -> getWheelSpeeds().rightMetersPerSecond, null);
       builder.addDoubleProperty("leftSpeed", () -> getWheelSpeeds().leftMetersPerSecond, null);

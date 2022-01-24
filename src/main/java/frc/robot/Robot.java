@@ -57,7 +57,7 @@ public class Robot extends TimedRobot {
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    String trajectoryJSON = "paths/output/TestPath.wpilib.json";
+    String trajectoryJSON = "paths/output/TrajectoryRecording.wpilib.json";
 
     Trajectory pathWeavertest = PathviewerLoader.loadTrajectory(trajectoryJSON);
 

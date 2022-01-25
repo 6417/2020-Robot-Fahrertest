@@ -32,6 +32,7 @@ public class RecordTrajectoryCommand extends CommandBase {
   @Override
   public void execute() {
     cooldown -= (timer.get() - previousTime);
+    previousTime = timer.get();
     if (cooldown <= 0)
     {
       logger.addDatapoint(DriveSubsystem.getInstance().getChassisSpeeds(), DriveSubsystem.getInstance().getPosition());

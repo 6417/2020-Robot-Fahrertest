@@ -33,4 +33,9 @@ public final class Constants {
         public static final int inUseJoystick_ID = 0;
         public static final int slowButton_ID = 8;
     }
+
+    public static class Gripper {
+        public static final int motorTunnel = 15;
+        public static final int motorGripper = 14;
+    }
 }

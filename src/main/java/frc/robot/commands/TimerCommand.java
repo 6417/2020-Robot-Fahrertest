@@ -27,7 +27,6 @@ public class TimerCommand extends CommandBase {
 
   @Override
   public boolean isFinished() {
-    if (timer.get() >= this.timeTarget) System.out.println("HERE");
     return timer.get() >= this.timeTarget;
   }
 }

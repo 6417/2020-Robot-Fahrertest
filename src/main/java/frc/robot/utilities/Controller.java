@@ -1,17 +1,15 @@
 package frc.robot.utilities;
 
 import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.Constants;
 import frc.robot.commands.RecordTrajectoryCommand;
 import frc.robot.commands.RunBallGripperCommand;
+import frc.robot.commands.ShootCommandGrop;
 import frc.robot.commands.SpeedCommand;
 import frc.robot.commands.StopBallGripperCommand;
-import frc.robot.commands.RunShooterCommand;
-import frc.robot.commands.ShootCommandGrop;
 
 public class Controller {
   
@@ -46,12 +44,12 @@ public class Controller {
   private Controller() {
       inUseJoystick = new Joystick(Constants.Controller.inUseJoystick_ID);
       slowButton = new JoystickButton(inUseJoystick, Constants.Controller.slowButton_ID);
-      recordButton = new JoystickButton(inUseJoystick, 2);
+      recordButton = new JoystickButton(inUseJoystick, Constants.Controller.recordButton_ID);
 
-      gripperCloseButton = new JoystickButton(inUseJoystick, 5);
-      gripperOpenButton = new JoystickButton(inUseJoystick, 3);
+      gripperCloseButton = new JoystickButton(inUseJoystick, Constants.Controller.gripperCloseButton_ID);
+      gripperOpenButton = new JoystickButton(inUseJoystick, Constants.Controller.gripperOpenButton_ID);
 
-      shooter = new JoystickButton(inUseJoystick, 1);
+      shooter = new JoystickButton(inUseJoystick, Constants.Controller.shooterButton_ID);
 
       slowButton.whileHeld(new SpeedCommand());
       recordButton.whileHeld(new RecordTrajectoryCommand());

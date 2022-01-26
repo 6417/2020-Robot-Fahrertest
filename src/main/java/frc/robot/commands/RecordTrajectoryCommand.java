@@ -13,7 +13,7 @@ import frc.robot.utilities.TrajectoryCreator;
 public class RecordTrajectoryCommand extends CommandBase {
   TrajectoryCreator logger;
   Timer timer;
-  double cooldown = 0.1;
+  double cooldown = 0.05;
   double previousTime;
 
   public RecordTrajectoryCommand() {
@@ -36,7 +36,7 @@ public class RecordTrajectoryCommand extends CommandBase {
     if (cooldown <= 0)
     {
       logger.addDatapoint(DriveSubsystem.getInstance().getChassisSpeeds(), DriveSubsystem.getInstance().getPosition());
-      cooldown = 0.1;
+      cooldown = 0.05;
     }
   }
 

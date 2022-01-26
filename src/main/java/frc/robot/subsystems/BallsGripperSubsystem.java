@@ -12,8 +12,8 @@ import frc.robot.Constants;
 public class BallsGripperSubsystem extends SubsystemBase{
     private static BallsGripperSubsystem instance;
 
-    private DoubleSolenoid platteolenoid;
-    private DoubleSolenoid gripperSplenoid;
+    private DoubleSolenoid platteSolenoid;
+    private DoubleSolenoid gripperSolenoid;
 
     private TalonSRX tunnel;
     private TalonSRX grippeTalonSRX;
@@ -26,29 +26,29 @@ public class BallsGripperSubsystem extends SubsystemBase{
     }
 
     private BallsGripperSubsystem() {
-        platteolenoid = new DoubleSolenoid(30, PneumaticsModuleType.CTREPCM, 4, 5);
-        gripperSplenoid = new DoubleSolenoid(30, PneumaticsModuleType.CTREPCM, 6, 7);
+        platteSolenoid = new DoubleSolenoid(Constants.Gripper.compressor_ID, PneumaticsModuleType.CTREPCM, Constants.Gripper.underPlattePneumatic_ID, Constants.Gripper.upperPlattePneumatic_ID);
+        gripperSolenoid = new DoubleSolenoid(Constants.Gripper.compressor_ID, PneumaticsModuleType.CTREPCM, Constants.Gripper.underGrpperPneumatic_ID, Constants.Gripper.upperGrpperPneumatic_ID);
 
         extendPlatte();
 
-        tunnel = new TalonSRX(Constants.Gripper.motorTunnel);
-        grippeTalonSRX = new TalonSRX(Constants.Gripper.motorGripper);
+        tunnel = new TalonSRX(Constants.Gripper.motorTunnel_ID);
+        grippeTalonSRX = new TalonSRX(Constants.Gripper.motorGripper_ID);
     }
 
     public void extendGripper() {
-        gripperSplenoid.set(Value.kForward);
+        gripperSolenoid.set(Value.kForward);
     }
 
     public void extendPlatte() {
-        platteolenoid.set(Value.kReverse);
+        platteSolenoid.set(Value.kReverse);
     }
 
     public void closeGripper() {
-        gripperSplenoid.set(Value.kReverse);
+        gripperSolenoid.set(Value.kReverse);
     }
 
     public void closePlatte() {
-        platteolenoid.set(Value.kForward);
+        platteSolenoid.set(Value.kForward);
     }
 
     public void runTunnel(double speed) {

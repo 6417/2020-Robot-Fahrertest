@@ -5,6 +5,7 @@ import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants;
 
 public class ShootBallSubsystem extends SubsystemBase{
     private static ShootBallSubsystem instance;
@@ -23,9 +24,9 @@ public class ShootBallSubsystem extends SubsystemBase{
     }
 
     private ShootBallSubsystem() {
-        leftUpperMotor = new CANSparkMax(23, MotorType.kBrushless);
-        rightUpperMotor = new CANSparkMax(22, MotorType.kBrushless);
-        underMotor = new CANSparkMax(21, MotorType.kBrushless);
+        leftUpperMotor = new CANSparkMax(Constants.Thrower.leftUpperMotor_ID, MotorType.kBrushless);
+        rightUpperMotor = new CANSparkMax(Constants.Thrower.rightUpperMotor_ID, MotorType.kBrushless);
+        underMotor = new CANSparkMax(Constants.Thrower.underMotor_ID, MotorType.kBrushless);
 
         leftUpperMotor.restoreFactoryDefaults();
         rightUpperMotor.restoreFactoryDefaults();

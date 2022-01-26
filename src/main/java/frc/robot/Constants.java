@@ -32,10 +32,25 @@ public final class Constants {
     public static class Controller {
         public static final int inUseJoystick_ID = 0;
         public static final int slowButton_ID = 8;
+        public static final int recordButton_ID = 2;
+        public static final int gripperCloseButton_ID = 5;
+        public static final int gripperOpenButton_ID = 3;
+        public static final int shooterButton_ID = 1;
     }
 
     public static class Gripper {
-        public static final int motorTunnel = 15;
-        public static final int motorGripper = 14;
+        public static final int motorTunnel_ID = 15;
+        public static final int motorGripper_ID = 14;
+        public static final int underPlattePneumatic_ID = 4;
+        public static final int upperPlattePneumatic_ID = 5;
+        public static final int underGrpperPneumatic_ID = 6;
+        public static final int upperGrpperPneumatic_ID = 7;
+        public static final int compressor_ID = 30;
+    }
+
+    public static class Thrower {
+        public static final int leftUpperMotor_ID = 23;
+        public static final int rightUpperMotor_ID = 22;
+        public static final int underMotor_ID = 21;
     }
 }

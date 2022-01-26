@@ -51,12 +51,29 @@ public class TrajectoryCreator {
 
     public void addDatapoint(ChassisSpeeds speeds, Pose2d pose) {
         try {
-
+            // if ((Math.abs(calculateAcceleration(speeds.vxMetersPerSecond, timer.get())) >= 0.005) && firstDatapoint) {
+            //     timer.stop();
+            //     timer.reset();
+            //     timer.start();
+            //     previousTime = -0.1;
+            if ((Math.abs(speeds.vxMetersPerSecond) >= 0.01) && firstDatapoint) {
+                timer.stop();
+                timer.reset();
+                timer.start();
+                previousTime = -0.1;
+            } else if ((Math.abs(speeds.vxMetersPerSecond) < 0.01) && firstDatapoint) {
+                return;
+            } else if (Math.abs(speeds.vxMetersPerSecond) < 0.02) {
+                timer.stop();
+                return;
+            }
+            
             double cTime = timer.get();
 
-            if (!firstDatapoint){
+            if (!firstDatapoint) {
                 writer.write(",\n");
             }
+
             writer.write("{\n");
             writer.write("\"acceleration\": " + calculateAcceleration(speeds.vxMetersPerSecond, cTime) + ",\n");
             writer.write("\"curvature\": " + calculateCurvature(speeds.vxMetersPerSecond, speeds.omegaRadiansPerSecond) + ",\n");

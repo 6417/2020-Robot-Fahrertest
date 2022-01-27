@@ -3,6 +3,11 @@ package frc.robot.utilities;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -11,12 +16,135 @@ import edu.wpi.first.wpilibj.Timer;
 import frc.robot.Constants;
 
 public class TrajectoryCreator {
+    private static class Datapoint {
+        private double acceleration;
+        private double curvature;
+        Pose pose;
+        private double time;
+        private double velocity;
+
+        // Getter Methods
+
+        public double getAcceleration() {
+            return acceleration;
+        }
+
+        public double getCurvature() {
+            return curvature;
+        }
+
+        public Pose getPose() {
+            return pose;
+        }
+
+        public double getTime() {
+            return time;
+        }
+
+        public double getVelocity() {
+            return velocity;
+        }
+
+        // Setter Methods
+
+        public void setAcceleration(double acceleration) {
+            this.acceleration = acceleration;
+        }
+
+        public void setCurvature(double curvature) {
+            this.curvature = curvature;
+        }
+
+        public void setPose(Pose poseObject) {
+            this.pose = poseObject;
+        }
+
+        public void setTime(double time) {
+            this.time = time;
+        }
+
+        public void setVelocity(double velocity) {
+            this.velocity = velocity;
+        }
+    }
+
+    private static class Pose {
+        Rotation rotation;
+        Translation translation;
+
+        // Getter Methods
+
+        public Rotation getRotation() {
+            return rotation;
+        }
+
+        public Translation getTranslation() {
+            return translation;
+        }
+
+        // Setter Methods
+
+        public void setRotation(Rotation rotationObject) {
+            this.rotation = rotationObject;
+        }
+
+        public void setTranslation(Translation translationObject) {
+            this.translation = translationObject;
+        }
+    }
+
+    private static class Translation {
+        private double x;
+        private double y;
+
+        // Getter Methods
+
+        public double getX() {
+            return x;
+        }
+
+        public double getY() {
+            return y;
+        }
+
+        // Setter Methods
+
+        public void setX(double x) {
+            this.x = x;
+        }
+
+        public void setY(double y) {
+            this.y = y;
+        }
+    }
+
+    private static class Rotation {
+        private double radians;
+
+        // Getter Methods
+
+        public double getRadians() {
+            return radians;
+        }
+
+        // Setter Methods
+
+        public void setRadians(double radians) {
+            this.radians = radians;
+        }
+    }
+
     private File file;
     private FileWriter writer;
     private Timer timer;
     private double previousTime;
     private double previousVelocity;
     private boolean firstDatapoint = true;
+
+    private GsonBuilder builder;
+    Gson gson;
+
+    private List<Datapoint> datapoints;
 
     public TrajectoryCreator(String filename) {
         try {
@@ -27,8 +155,13 @@ public class TrajectoryCreator {
             // Create a writer to write to the file
             writer = new FileWriter(filename);
 
-            // Writing the header of the file
-            createFileHeader();
+            // Create the json builders
+            builder = new GsonBuilder();
+            builder.setPrettyPrinting();
+
+            gson = builder.create(); 
+
+            datapoints = new ArrayList<Datapoint>();
 
             timer = new Timer();
             timer.reset();
@@ -36,6 +169,7 @@ public class TrajectoryCreator {
 
             previousTime = 0;
             previousVelocity = 0;
+            
         } catch (IOException e) {
             DriverStation.reportError("Failed to open file: " + file.getAbsolutePath(), e.getStackTrace());
         }
@@ -46,77 +180,68 @@ public class TrajectoryCreator {
     }
 
     private double calculateCurvature(double velocity, double angularVelocity) {
-        if (velocity == 0) {return 0;};
+        if (velocity == 0) {
+            return 0;
+        }
+        ;
         return angularVelocity / velocity;
     }
 
     public void addDatapoint(ChassisSpeeds speeds, Pose2d pose) {
         try {
-            if ((Math.abs(speeds.vxMetersPerSecond) >= Constants.Autonomous.VELOCITY_THRESHOLD_START) && firstDatapoint) {
+            // Conditions to stop and start
+            if ((Math.abs(speeds.vxMetersPerSecond) >= Constants.Autonomous.VELOCITY_THRESHOLD_START)
+                    && firstDatapoint) {
                 timer.stop();
                 timer.reset();
                 timer.start();
                 previousTime = -0.1;
-            } else if ((Math.abs(speeds.vxMetersPerSecond) < Constants.Autonomous.VELOCITY_THRESHOLD_START) && firstDatapoint) {
+            } else if ((Math.abs(speeds.vxMetersPerSecond) < Constants.Autonomous.VELOCITY_THRESHOLD_START)
+                    && firstDatapoint) {
                 return;
             } else if (Math.abs(speeds.vxMetersPerSecond) < Constants.Autonomous.VELOCITY_THRESHOLD_END) {
                 timer.stop();
                 return;
             }
-            
+
             double cTime = timer.get();
 
-            if (!firstDatapoint) {
-                writer.write(",\n");
-            }
+            // Create the datapoint object to later store in the json
+            Rotation rotation = new Rotation();
+            rotation.setRadians(pose.getRotation().getRadians());
 
-            writer.write("{\n");
-            writer.write("\"acceleration\": " + calculateAcceleration(speeds.vxMetersPerSecond, cTime) + ",\n");
-            writer.write("\"curvature\": " + calculateCurvature(speeds.vxMetersPerSecond, speeds.omegaRadiansPerSecond) + ",\n");
-            writer.write("\"pose\": {\n");
-            writer.write("\"rotation\": {\n");
-            writer.write("\"radians\": " + pose.getRotation().getRadians() + "\n");
-            writer.write("},\n");
-            writer.write("\"translation\": {\n");
-            writer.write("\"x\": " + pose.getX() * Constants.Autonomous.POSITION_CORRECTION + ",\n");
-            writer.write("\"y\": " + pose.getY() * Constants.Autonomous.POSITION_CORRECTION + "\n");
-            writer.write("}\n");
-            writer.write("},\n");
-            writer.write("\"time\": " + cTime + ",\n");
-            writer.write("\"velocity\": " + speeds.vxMetersPerSecond + "\n");
-            writer.write("}");
+            Translation translation = new Translation();
+            translation.setX(pose.getX() * Constants.Autonomous.POSITION_CORRECTION);
+            translation.setY(pose.getY() * Constants.Autonomous.POSITION_CORRECTION);
+
+            Pose position = new Pose();
+            position.setRotation(rotation);
+            position.setTranslation(translation);
+
+            Datapoint point = new Datapoint();
+            point.setAcceleration(calculateAcceleration(speeds.vxMetersPerSecond, cTime));
+            point.setCurvature(calculateCurvature(speeds.vxMetersPerSecond, speeds.omegaRadiansPerSecond));
+            point.setPose(position);
+            point.setTime(cTime);
+            point.setVelocity(speeds.vxMetersPerSecond);
+
+            // Add the datapoint to the trajectory
+            datapoints.add(point);
 
             previousTime = cTime;
             previousVelocity = speeds.vxMetersPerSecond;
             firstDatapoint = false;
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             DriverStation.reportError("Failed to write datapoint: " + file, e.getStackTrace());
-        }
-    }
-
-    private void createFileHeader() {
-        try {
-            writer.write("[\n");
-        } catch (IOException e) {
-            DriverStation.reportError("Failed to write file: " + file, e.getStackTrace());
-        }
-    }
-
-    private void createFileFooter() {
-        try {
-            writer.write("\n]\n");
-        } catch (IOException e) {
-            DriverStation.reportError("Failed to write file: " + file, e.getStackTrace());
         }
     }
 
     public void close() {
         try {
-            // Writing the footer of the file
-            createFileFooter();
-
             // Writing the content to the file
+            String jsonContent = this.gson.toJson(datapoints);
+            writer.write(jsonContent);
             writer.close();
         } catch (IOException e) {
             DriverStation.reportError("Unable to write file: " + file.getAbsolutePath(), e.getStackTrace());

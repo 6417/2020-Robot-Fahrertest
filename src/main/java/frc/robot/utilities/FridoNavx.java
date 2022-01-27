@@ -9,6 +9,8 @@ public class FridoNavx extends AHRS{
 
     public FridoNavx(SPI.Port port) {
         super(port);
+        super.calibrate();
+        navxOffset = 0;
     }
 
     public void setAngleOffset(double angle) {
@@ -24,6 +26,6 @@ public class FridoNavx extends AHRS{
     // Overriding the getAngle to implement offsets
     @Override
     public double getAngle() {
-        return super.getAngle() + navxOffset;
+        return -(super.getAngle() + navxOffset);
     }
 }

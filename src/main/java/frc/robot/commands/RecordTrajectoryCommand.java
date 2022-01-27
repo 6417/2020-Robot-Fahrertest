@@ -43,6 +43,7 @@ public class RecordTrajectoryCommand extends CommandBase {
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) {
+    System.out.println(DriveSubsystem.getInstance().getPosition().toString());
     logger.close();
   }
 

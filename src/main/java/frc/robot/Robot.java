@@ -4,8 +4,11 @@
 
 package frc.robot;
 
+import com.kauailabs.navx.frc.AHRS;
+
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.I2C.Port;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.subsystems.DriveSubsystem;
@@ -57,7 +60,8 @@ public class Robot extends TimedRobot {
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    String trajectoryJSON = "paths/output/TrajectoryRecording.wpilib.json";
+    // String trajectoryJSON = "paths/output/TrajectoryRecording.wpilib.json";
+    String trajectoryJSON = "paths/output/GeradeAus4m.wpilib.json";
 
     Trajectory pathWeavertest = PathviewerLoader.loadTrajectory(trajectoryJSON);
 
@@ -83,12 +87,20 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during operator control. */
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+  }
 
   @Override
   public void testInit() {
     // Cancels all running commands at the start of test mode.
     CommandScheduler.getInstance().cancelAll();
+    AHRS test = new AHRS(Port.kMXP);
+    System.out.println("NAVX_ANGLE" + test.getAngle());
+    test.reset();
+    System.out.println("NAVX_ANGLE" + test.getAngle());
+    test.reset();
+    System.out.println("NAVX_ANGLE" + test.getAngle());
+
   }
 
   /** This function is called periodically during test mode. */

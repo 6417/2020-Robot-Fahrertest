@@ -8,6 +8,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import frc.robot.Constants;
 
 public class TrajectoryCreator {
     private File file;
@@ -51,19 +52,14 @@ public class TrajectoryCreator {
 
     public void addDatapoint(ChassisSpeeds speeds, Pose2d pose) {
         try {
-            // if ((Math.abs(calculateAcceleration(speeds.vxMetersPerSecond, timer.get())) >= 0.005) && firstDatapoint) {
-            //     timer.stop();
-            //     timer.reset();
-            //     timer.start();
-            //     previousTime = -0.1;
-            if ((Math.abs(speeds.vxMetersPerSecond) >= 0.01) && firstDatapoint) {
+            if ((Math.abs(speeds.vxMetersPerSecond) >= Constants.Autonomous.VELOCITY_THRESHOLD_START) && firstDatapoint) {
                 timer.stop();
                 timer.reset();
                 timer.start();
                 previousTime = -0.1;
-            } else if ((Math.abs(speeds.vxMetersPerSecond) < 0.01) && firstDatapoint) {
+            } else if ((Math.abs(speeds.vxMetersPerSecond) < Constants.Autonomous.VELOCITY_THRESHOLD_START) && firstDatapoint) {
                 return;
-            } else if (Math.abs(speeds.vxMetersPerSecond) < 0.02) {
+            } else if (Math.abs(speeds.vxMetersPerSecond) < Constants.Autonomous.VELOCITY_THRESHOLD_END) {
                 timer.stop();
                 return;
             }
@@ -82,8 +78,8 @@ public class TrajectoryCreator {
             writer.write("\"radians\": " + pose.getRotation().getRadians() + "\n");
             writer.write("},\n");
             writer.write("\"translation\": {\n");
-            writer.write("\"x\": " + pose.getX() + ",\n");
-            writer.write("\"y\": " + pose.getY() + "\n");
+            writer.write("\"x\": " + pose.getX() * Constants.Autonomous.POSITION_CORRECTION + ",\n");
+            writer.write("\"y\": " + pose.getY() * Constants.Autonomous.POSITION_CORRECTION + "\n");
             writer.write("}\n");
             writer.write("},\n");
             writer.write("\"time\": " + cTime + ",\n");

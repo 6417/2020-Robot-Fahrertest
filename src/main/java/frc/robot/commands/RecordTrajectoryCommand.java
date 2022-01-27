@@ -6,6 +6,7 @@ package frc.robot.commands;
 
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.CommandBase;
+import frc.robot.Constants;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.utilities.TrajectoryCreator;
 
@@ -13,7 +14,7 @@ import frc.robot.utilities.TrajectoryCreator;
 public class RecordTrajectoryCommand extends CommandBase {
   TrajectoryCreator logger;
   Timer timer;
-  double cooldown = 0.1;
+  double cooldown = Constants.Autonomous.RECORDING_COOLDOWN_SECONDS;
   double previousTime;
 
   public RecordTrajectoryCommand() {
@@ -36,7 +37,7 @@ public class RecordTrajectoryCommand extends CommandBase {
     if (cooldown <= 0)
     {
       logger.addDatapoint(DriveSubsystem.getInstance().getChassisSpeeds(), DriveSubsystem.getInstance().getPosition());
-      cooldown = 0.1;
+      cooldown = Constants.Autonomous.RECORDING_COOLDOWN_SECONDS;
     }
   }
 

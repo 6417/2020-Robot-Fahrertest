@@ -29,6 +29,13 @@ public final class Constants {
         public static final double kD = 0;
     }
 
+    public static class Autonomous {
+        public static final double RECORDING_COOLDOWN_SECONDS = 0.1; 
+        public static final double VELOCITY_THRESHOLD_START = 0.01;
+        public static final double VELOCITY_THRESHOLD_END = 0.02;
+        public static final double POSITION_CORRECTION = 0.9875;
+    }
+
     public static class Controller {
         public static final int inUseJoystick_ID = 0;
         public static final int slowButton_ID = 8;
